@@ -1,6 +1,6 @@
 
 
-from peewee import (SqliteDatabase, Model, CharField,ForeignKeyField, DateField, DoesNotExist)
+from peewee import (SqliteDatabase, Model, CharField,ForeignKeyField, DateField, DoesNotExist, PrimaryKeyField)
 from passlib.hash import pbkdf2_sha512 as hsh 
 
 from hashlib import md5
@@ -10,14 +10,17 @@ import os
 
 load_dotenv()
 
-db = SqliteDatabase('ToDo.db')
+rute_db ='ToDo.db'
+db = SqliteDatabase(rute_db)
 
+import sqlite3
 
 
 
 class Users(Model):
 
-    name = CharField(max_length=50)
+    id = PrimaryKeyField(null=False)
+    name = CharField(max_length=50,unique=True)
     email = CharField(max_length=200)
     password = CharField(max_length=300)
 
@@ -38,13 +41,34 @@ class Users(Model):
 
 class Todo(Model):
     
-    user_id = ForeignKeyField(Users,backref="todo")
+    id = PrimaryKeyField(null=False)
+    user_id = ForeignKeyField(Users,backref="todos")
+    #user_id = ForeignKeyField(Users, related_name='todos')
+
     title = CharField()
     description = CharField()
 
     class Meta:
         database = db
+        db_table = "todos"
 
 
+    @staticmethod
+    def create(**args):
+        query = "INSERT INTO todos ('user_id','title','description')VALUES ({user_id},'{title}','{description}')".format(**args)
 
+        conn = sqlite3.connect(rute_db)
+
+
+        c = conn.cursor()
+
+        print(query)
+        # Create table
+        c.execute(query)
+
+
+        conn.commit()
+        conn.close()
+
+#db.drop_tables()
 db.create_tables([Todo,Users])
