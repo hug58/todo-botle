@@ -1,19 +1,15 @@
 
 
-#from jwt_bottle import JWTPlugin, auth_required
 
-from bottle import request,response #,redirect
-from bottle import route, run,get,post
-from playhouse.shortcuts import model_to_dict
+from bottle import request,response
 
-
-from models import Todo,Users #,Auth
+from models import Todo,Users 
 from serializers import TodoSchema
 from dotenv import load_dotenv
 
 import os
 import json
-import  bottle
+import bottle
 import jwt
 import time
 
@@ -25,18 +21,37 @@ load_dotenv()
 SECRET_KEY = os.getenv('SECRET_KEY')
 app = bottle.Bottle()
 
+@app.post('/api/auth/register')
+def register():
+    
+    if request.method == 'POST':
+        received_json_data = request.json
 
-@app.post('/api/auth')
+        try:
+            user = Users.create(
+                name= received_json_data.get('username'), 
+                email= received_json_data.get('email'), 
+                password= received_json_data.get('password'))
+            
+            user.gen_hash()
+            user.save()
+
+            response.status = 201
+            return {'status': f'user {user.name} successfully registered!'}
+
+        except:
+            return {'status': f'user {received_json_data.get("username")}  already registered'}
+            
+
+    else:
+        return {'status': f'wrong method, {request.method}'}
+
+
+@app.post('/api/auth/login')
 def login_required():
 
     if request.method == 'POST':
-
-        body_unicode = request.json
-        print(body_unicode,type(body_unicode))
-        received_json_data = body_unicode
-
-        print(received_json_data)
-        #received_json_data = json.loads(body_unicode)
+        received_json_data = request.json
 
         email = received_json_data.get('email')
         password = received_json_data.get('password')
@@ -45,7 +60,7 @@ def login_required():
         user = Users.get(email=email)
 
         if not user.verify(password):
-            return "Password incorrect"
+            return 'Password incorrect'
 
         refresh_token_content = {}
 
@@ -79,42 +94,41 @@ def login_required():
         actual_access_token = u
         ts = float (time.time ())
 
-        final_payload_x = { "user" : 
+        final_payload_x = { 'user' : 
         { 
-            "userName" : user.name, 
-            "email" : user.email, 
-            "issual_time" : int (ts), 
-            "expire_time" : int (ts + 3500) 
+            'userName' : user.name, 
+            'email' : user.email, 
+            'issual_time' : int (ts), 
+            'expire_time' : int (ts + 3500) 
         }, 
 
-            "jwtToken" : actual_access_token, 
-            "refreshToken" : actual_refresh_token 
+            'jwtToken' : actual_access_token, 
+            'refreshToken' : actual_refresh_token 
         } 
-
 
         return final_payload_x
 
 def checkiftokenisvalid(func):
-
+    '''
+    decorator that checks if the token has expired or not
+    '''
     def wrapper(*args):
 
   
-        #print(request.params.get('HTTP_JWTTOKEN'))
-
-        refreshToken = request.get_header('refreshToken')
+        #refreshToken = request.get_header('refreshToken')
         jwtToken = request.get_header('jwtToken')
 
-        payload = jwt.decode(jwtToken, SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(jwtToken, SECRET_KEY, algorithms=['HS256'])
 
-        received_user = payload.get("username") 
-        received_expire_time = payload.get("expire_time")            
-        received_issual_time = payload.get("issual_time")
+        received_user = payload.get('username') 
+        received_expire_time = payload.get('expire_time')            
+        received_issual_time = payload.get('issual_time')
 
         if int(time.time()) > received_expire_time:
             
-            print("current tym",int(time.time()))
-            print("expire tym",received_expire_time)
-            print("issue tym", received_issual_time)
+            print('current tym',int(time.time()))
+            print('expire tym',received_expire_time)
+            print('issue tym', received_issual_time)
             return 'Token Expired'
 
                 
@@ -129,24 +143,28 @@ def checkiftokenisvalid(func):
 def create(userinfo):
 
     data = request.json
-
     user = Users.get(name=userinfo)
 
-    """
+    '''
+    peewee has a bug when I try to use a foreign key, so 
+    I had to make my own static method in SQL code
+    '''
+
+    '''
     to_do = Todo.create(
         id_user = user,
         title = data['title'],
         description = data['description'],
     )
-    """
+    to_do.save()
+    '''
 
     Todo.create(
         title= data['title'],
         description= data['description'],
         user_id= user.id
     )
-
-    #to_do.save()
+    response.status = 201
     return data
 
 @app.get('/api/all')
@@ -166,10 +184,10 @@ def list_to_do(userinfo):
 def index(userinfo):
 
     if user:
-        return f"Welcome {userinfo.user}"
+        return f'Welcome {userinfo.user}'
     
     else:
-        return "Error, not authorized"
+        return 'Error, not authorized'
 
 if __name__ == '__main__':
 
@@ -177,7 +195,13 @@ if __name__ == '__main__':
         user = Users.get(name='Hugo', email='hugomontaez@gmail.com')
 
     except Users.DoesNotExist:
-        user = Users.create(name='Hugo', email='hugomontaez@gmail.com', password='123456')
+
+
+        user = Users.create(
+            name='Hugo', 
+            email='hugomontaez@gmail.com', 
+            password='123456')
+        
         user.gen_hash()
         user.save()
 
