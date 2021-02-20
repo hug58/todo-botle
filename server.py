@@ -2,6 +2,7 @@
 
 
 from bottle import request,response
+from truckpad.bottle.cors import CorsPlugin, enable_cors
 
 from models import Todo,Users 
 from serializers import TodoSchema
@@ -15,22 +16,11 @@ import time
 
 
 '''
-Cargando las variables locales
+Loading the local variables
 '''
 load_dotenv()
 SECRET_KEY = os.getenv('SECRET_KEY')
 app = bottle.Bottle()
-
-
-@app.hook('after_request')
-def enable_cors():
-    """
-    You need to add some headers to each request.
-    Don't use the wildcard '*' for Access-Control-Allow-Origin in production.
-    """
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'PUT, GET, POST, DELETE, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token'
 
 
 def checkiftokenisvalid(func):
@@ -42,6 +32,9 @@ def checkiftokenisvalid(func):
   
         #refreshToken = request.get_header('refreshToken')
         jwtToken = request.get_header('jwtToken')
+
+        if not jwtToken:
+            return {'status':'Token not found'}
 
         payload = jwt.decode(jwtToken, SECRET_KEY, algorithms=['HS256'])
 
@@ -62,7 +55,7 @@ def checkiftokenisvalid(func):
 
     return wrapper
 
-
+@enable_cors
 @app.post('/api/auth/register')
 def register():  
     if request.method == 'POST':
@@ -88,6 +81,7 @@ def register():
         return {'status': f'wrong method, {request.method}'}
 
 
+@enable_cors
 @app.post('/api/auth/login')
 def login_required():
     if request.method == 'POST':
@@ -103,10 +97,13 @@ def login_required():
         email = received_json_data.get('email')
         password = received_json_data.get('password')
 
-        user = Users.get(email=email)
+        try:
+            user = Users.get(email=email)
+            if not user.verify(password):
+                return 'Password incorrect'
 
-        if not user.verify(password):
-            return 'Password incorrect'
+        except Users.DoesNotExist:
+            return {'status':'Unregistered user'}
 
         refresh_token_content = {}
 
@@ -152,7 +149,11 @@ def login_required():
             'refreshToken' : actual_refresh_token 
         } 
 
-        return final_payload_x
+        response.content_type = 'application/json'
+        return json.dumps(final_payload_x)
+
+    else:
+        return {'status':'method not authorized'}
 
 
 @app.post('/api/create')
@@ -183,7 +184,7 @@ def create(userinfo):
     response.status = 201
     return data
 
-
+@enable_cors
 @app.get('/api/all')
 @checkiftokenisvalid
 def list_to_do(userinfo):
@@ -195,6 +196,7 @@ def list_to_do(userinfo):
     return {'data':result}
 
 
+@enable_cors
 @app.post('/api')
 @checkiftokenisvalid
 def index(userinfo):
@@ -212,7 +214,6 @@ if __name__ == '__main__':
 
     except Users.DoesNotExist:
 
-
         user = Users.create(
             name='Hugo', 
             email='hugomontaez@gmail.com', 
@@ -220,5 +221,7 @@ if __name__ == '__main__':
         
         user.gen_hash()
         user.save()
+    
 
+    app.install(CorsPlugin(origins=['*']))
     app.run(debug=True, reloader=True, port=8000)
