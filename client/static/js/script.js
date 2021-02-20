@@ -1,1 +1,26 @@
 /*You script*/
+
+const login = document.getElementById("form-login");
+
+login.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const username = login["user"].value;
+  const email = login["email"].value;
+  const password = login["password"].value;
+  const data = {
+    username:username,
+    email:email,
+    password: password,
+  };
+  console.log(data);
+  fetch("http://localhost:8000/api/auth/login", {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  }).then((response) => {
+    // HTTP 301 response
+    console.log(response);
+    //window.location.href = response.url; //Redirige
+  });
+});

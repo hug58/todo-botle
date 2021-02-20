@@ -21,9 +21,50 @@ load_dotenv()
 SECRET_KEY = os.getenv('SECRET_KEY')
 app = bottle.Bottle()
 
+
+@app.hook('after_request')
+def enable_cors():
+    """
+    You need to add some headers to each request.
+    Don't use the wildcard '*' for Access-Control-Allow-Origin in production.
+    """
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'PUT, GET, POST, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token'
+
+
+def checkiftokenisvalid(func):
+    '''
+    decorator that checks if the token has expired or not
+    '''
+    def wrapper(*args):
+
+  
+        #refreshToken = request.get_header('refreshToken')
+        jwtToken = request.get_header('jwtToken')
+
+        payload = jwt.decode(jwtToken, SECRET_KEY, algorithms=['HS256'])
+
+        received_user = payload.get('username') 
+        received_expire_time = payload.get('expire_time')            
+        received_issual_time = payload.get('issual_time')
+
+        if int(time.time()) > received_expire_time:
+            
+            print('current tym',int(time.time()))
+            print('expire tym',received_expire_time)
+            print('issue tym', received_issual_time)
+            return 'Token Expired'
+
+                
+        
+        return func(received_user)
+
+    return wrapper
+
+
 @app.post('/api/auth/register')
-def register():
-    
+def register():  
     if request.method == 'POST':
         received_json_data = request.json
 
@@ -49,14 +90,19 @@ def register():
 
 @app.post('/api/auth/login')
 def login_required():
-
     if request.method == 'POST':
-        received_json_data = request.json
+
+        if request.json:
+            received_json_data = request.json
+        elif request.body:
+            received_json_data = json.load(request.body)
+        else:
+            response.status = 400
+            return {'status': 'Body no found'}
 
         email = received_json_data.get('email')
         password = received_json_data.get('password')
 
-        #Datos del usuario, actual_json_data
         user = Users.get(email=email)
 
         if not user.verify(password):
@@ -108,40 +154,10 @@ def login_required():
 
         return final_payload_x
 
-def checkiftokenisvalid(func):
-    '''
-    decorator that checks if the token has expired or not
-    '''
-    def wrapper(*args):
-
-  
-        #refreshToken = request.get_header('refreshToken')
-        jwtToken = request.get_header('jwtToken')
-
-        payload = jwt.decode(jwtToken, SECRET_KEY, algorithms=['HS256'])
-
-        received_user = payload.get('username') 
-        received_expire_time = payload.get('expire_time')            
-        received_issual_time = payload.get('issual_time')
-
-        if int(time.time()) > received_expire_time:
-            
-            print('current tym',int(time.time()))
-            print('expire tym',received_expire_time)
-            print('issue tym', received_issual_time)
-            return 'Token Expired'
-
-                
-        
-        return func(received_user)
-
-    return wrapper
-
 
 @app.post('/api/create')
 @checkiftokenisvalid
 def create(userinfo):
-
     data = request.json
     user = Users.get(name=userinfo)
 
@@ -167,10 +183,10 @@ def create(userinfo):
     response.status = 201
     return data
 
+
 @app.get('/api/all')
 @checkiftokenisvalid
 def list_to_do(userinfo):
-
     id_user = Users.get(name=userinfo)
     query = Todo.select().where(id_user)
 
