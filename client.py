@@ -6,16 +6,20 @@ app = bottle.Bottle()
 
 @app.get('/',method=['GET'])
 def index():
-    return template('./client/index.html')
+    return template('./staticfiles/index.html')
+
+@app.get('/register',method=['GET'])
+def register():
+    return template('./staticfiles/register.html')
 
 @app.get('/notes',method=['GET'])
 def notes():
-    return template('./client/notes.html')
+    return template('./staticfiles/notes.html')
 
 @app.get('/static/<dir:path>/<filename:path>')
 def server_static(dir,filename):
     print(dir,filename)
-    return static_file(filename, root=f'client/static/{dir}')
+    return static_file(filename, root=f'staticfiles/static/{dir}')
 
 
 if __name__ == '__main__':

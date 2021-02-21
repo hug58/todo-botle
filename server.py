@@ -28,8 +28,6 @@ def checkiftokenisvalid(func):
     decorator that checks if the token has expired or not
     '''
     def wrapper(*args):
-
-  
         #refreshToken = request.get_header('refreshToken')
         jwtToken = request.get_header('jwtToken')
 
@@ -49,8 +47,6 @@ def checkiftokenisvalid(func):
             print('issue tym', received_issual_time)
             return 'Token Expired'
 
-                
-        
         return func(received_user)
 
     return wrapper
@@ -76,7 +72,6 @@ def register():
         except:
             return {'status': f'user {received_json_data.get("username")}  already registered'}
             
-
     else:
         return {'status': f'wrong method, {request.method}'}
 
@@ -94,11 +89,11 @@ def login_required():
             response.status = 400
             return {'status': 'Body no found'}
 
-        email = received_json_data.get('email')
+        username = received_json_data.get('username')
         password = received_json_data.get('password')
 
         try:
-            user = Users.get(email=email)
+            user = Users.get(name=username)
             if not user.verify(password):
                 return 'Password incorrect'
 
@@ -189,8 +184,9 @@ def create(userinfo):
 @app.get('/api/all')
 @checkiftokenisvalid
 def list_to_do(userinfo):
-    id_user = Users.get(name=userinfo)
-    query = Todo.select().where(id_user)
+    user_id = Users.get(name=userinfo).id
+    
+    query = Todo.select().where(Todo.user_id == user_id)
 
     schema = TodoSchema()
     result = schema.dump(query,many=True)

@@ -23,7 +23,7 @@ class Users(Model):
 
     id = PrimaryKeyField(null=False)
     name = CharField(max_length=50,unique=True)
-    email = CharField(max_length=200)
+    email = CharField(max_length=200,unique=True)
     password = CharField(max_length=300)
 
     def gen_hash(self):
