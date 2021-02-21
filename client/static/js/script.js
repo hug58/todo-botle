@@ -20,6 +20,16 @@ login.addEventListener("submit", (e) => {
     body: JSON.stringify(data),
   })
   .then(response => response.json())
-  .then( data => console.log(data))
+    .then( data => {
+      console.log(data)
+      localStorage.clear()
+      localStorage.setItem('jwtToken', data.jwtToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      if(data.jwtToken && data.refreshToken){
+      window.location.href = '/notes'
+     
+    }
+
+    } )
 
 });

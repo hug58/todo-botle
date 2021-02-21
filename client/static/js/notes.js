@@ -8,7 +8,8 @@ const notestrash = [
 
 const note = document.getElementById("form-note");
 const container = document.getElementById("notes-container");
-
+const jwt = localStorage.getItem("jwtToken");
+const refreshToken = localStorage.getItem("refreshToken");
 //Muestra las notas
 //
 const showNotes = (data) => {
@@ -30,35 +31,36 @@ const showNotes = (data) => {
 
 //Consulta las notas
 
-const request = () =>{
+const request = () => {
   fetch("http://localhost:8000/api/all", {
     method: "GET",
-    headers: { "Content-Type": "application/json" }, 
-  }).then((response) => {
+    headers: {
+      "Content-Type": "application/json",
+      jwtToken: jwt,
+      refreshToken: refreshToken,
+    },
+  })
+    .then((response) => {
+      // Si responde positivo,recarga las tareas
 
-    // Si responde positivo,recarga las tareas
-    if(response.status == 200){
-      showNotes(response.data)
-    }else{
-      showNotes()
-    }
-    console.log(response);
+      console.log(response);
 
-    //Muestra error
-  }).catch((err)=>{
-    console.log(err);
-    showNotes()
-  });
-}
+      //Muestra error
+    })
+    .catch((err) => {
+      console.log(err);
+      showNotes();
+    });
+};
 
-// Envia las tareas 
+// Envia las tareas
 note.addEventListener("submit", (e) => {
   e.preventDefault();
-  const name = note["name"].value;
+  const title = note["title"].value;
   const description = note["description"].value;
 
   const data = {
-    name,
+    title,
     description,
   };
 
@@ -66,19 +68,21 @@ note.addEventListener("submit", (e) => {
 
   fetch("http://localhost:8000/api/create", {
     method: "POST",
-    mode: "no-cors",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      jwtToken: jwt,
+      refreshToken: refreshToken,
+    },
     body: JSON.stringify(data),
   }).then((response) => {
     // HTTP 301 response
     // Si responde positivo,recarga las tareas
-    if(response.status == 201){
-      request()
+    if (response.status == 201) {
+      request();
     }
     console.log(response);
-    //window.location.href = response.url; //Redirige
-  });
 
+  });
 });
 
 window.addEventListener("load", () => {

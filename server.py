@@ -156,6 +156,7 @@ def login_required():
         return {'status':'method not authorized'}
 
 
+@enable_cors
 @app.post('/api/create')
 @checkiftokenisvalid
 def create(userinfo):
