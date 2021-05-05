@@ -1,9 +1,11 @@
 
 
 from peewee import (SqliteDatabase, Model, CharField,ForeignKeyField, DateField, DoesNotExist, PrimaryKeyField)
-from passlib.hash import pbkdf2_sha512 as hsh 
 
+
+from passlib.hash import pbkdf2_sha512 as hsh 
 from hashlib import md5
+
 from dotenv import load_dotenv
 
 import os
@@ -21,19 +23,20 @@ db = SqliteDatabase(rute_db)
 
 class Users(Model):
 
-    id = PrimaryKeyField(null=False)
-    name = CharField(max_length=50,unique=True)
-    email = CharField(max_length=200,unique=True)
-    password = CharField(max_length=300)
+    id:int = PrimaryKeyField(null=False)
+    name:str = CharField(max_length=50,unique=True)
+    email:str = CharField(max_length=200,unique=True)
+    password:str = CharField(max_length=300)
 
-    def gen_hash(self):
-        _secret = md5(SECRET_KEY.encode()).hexdigest()
-        _password = md5(self.password.encode()).hexdigest()
-        self.password = hsh.hash(_secret + _password)
+    @staticmethod
+    def gen_hash(password:str) -> str:
+        _secret:str = md5(SECRET_KEY.encode()).hexdigest()
+        _password:str = md5(password.encode()).hexdigest()
+        return hsh.hash(_secret + _password)
 
-    def verify(self,password):
-        _secret = md5(SECRET_KEY.encode()).hexdigest()
-        _password = md5(password.encode()).hexdigest()
+    def verify(self,password:str) -> bool:
+        _secret:str = md5(SECRET_KEY.encode()).hexdigest()
+        _password:str = md5(password.encode()).hexdigest()
         return hsh.verify(_secret+_password, self.password)
 
     class Meta:
@@ -43,10 +46,10 @@ class Users(Model):
 
 class Todo(Model):
     
-    id = PrimaryKeyField(null=False)
-    user_id = ForeignKeyField(Users,backref="todos")
-    title = CharField()
-    description = CharField()
+    id:int = PrimaryKeyField(null=False)
+    user_id:Users = ForeignKeyField(Users,backref="todos")
+    title:str = CharField()
+    description :str= CharField()
 
     class Meta:
         database = db

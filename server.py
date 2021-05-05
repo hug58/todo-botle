@@ -58,12 +58,14 @@ def register():
         received_json_data = request.json
 
         try:
+
+            password = received_json_data.get('password')
+
             user = Users.create(
                 name= received_json_data.get('username'), 
                 email= received_json_data.get('email'), 
-                password= received_json_data.get('password'))
+                password= Users.gen_hash(password))
             
-            user.gen_hash()
             user.save()
 
             response.status = 201
@@ -207,16 +209,16 @@ def index(userinfo):
 if __name__ == '__main__':
 
     try:
-        user = Users.get(name='Hugo', email='hugomontaez@gmail.com')
+        user = Users.get(name='hugo', email='hugomontaez@gmail.com')
 
     except Users.DoesNotExist:
 
         user = Users.create(
-            name='Hugo', 
+            name='hugo', 
             email='hugomontaez@gmail.com', 
-            password='123456')
+            password=Users.gen_hash("123456")
+        )
         
-        user.gen_hash()
         user.save()
     
 
